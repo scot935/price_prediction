@@ -8,10 +8,21 @@ from sklearn.model_selection import train_test_split
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Content-Type"],
+    supports_credentials=True,
+    methods=["GET", "POST", "OPTIONS"]
+)
 
 # Load the model
-model = load_model("tesla_stock_model.h5")
+try:
+    model = load_model("tesla_stock_model.h5")
+except Exception as e:
+    print("Error loading model:", e)
+    model = None
 
 # Load CSV data and prepare the scaler
 try:
@@ -19,7 +30,6 @@ try:
     data_X = data[["Open", "High", "Low", "Volume"]].values
     data_y = data["Close"].values
 
-    # Use a small training subset to reduce memory use
     X_train, _, y_train, _ = train_test_split(data_X, data_y, test_size=0.9, random_state=42)
 
     scaler = StandardScaler()
@@ -36,7 +46,7 @@ except Exception as e:
 
 @app.route("/")
 def index():
-    return "Tesla Stock Predictor is running on Railway..!!"
+    return "Tesla Stock Predictor is running on Render 🚀"
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -51,6 +61,9 @@ def predict():
             float(input_data["volume"])
         ]]
 
+        if scaler is None or model is None:
+            return jsonify({"error": "Model or scaler not loaded"}), 500
+
         features_scaled = scaler.transform(features)
         pred_norm = model.predict(features_scaled).flatten()[0]
         predicted_close = pred_norm * y_train_std + y_train_mean
@@ -61,6 +74,6 @@ def predict():
         print("Prediction error:", e)
         return jsonify({"error": str(e)}), 400
 
-# if __name__ == "__main__":
-#     port = int(os.environ.get("PORT", 5000))
-#     app.run(host="0.0.0.0", port=port)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
