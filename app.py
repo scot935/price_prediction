@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Load the model
 model = load_model("tesla_stock_model.h5")
